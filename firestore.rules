@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - role: string (required, ['admin', 'user'])
+    //   - displayName: string (optional)
+    //
+    // Collection: submissions
+    // Document ID: {submissionId}
+    // Fields:
+    //   - name: string (required)
+    //   - birthDate: string (required)
+    //   - phone: string (required)
+    //   - region: string (required)
+    //   - quizResults: list (required)
+    //   - score: number (required)
+    //   - submittedAt: timestamp (required)
+    //
+    // Collection: posts
+    // Document ID: {postId}
+    // Fields:
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - imageUrl: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (optional)
+    //   - authorId: string (required)
+    //
+    // Collection: settings
+    // Document ID: config
+    // Fields:
+    //   - siteName: string (required)
+    //   - primaryColor: string (required)
+    //   - backgroundColor: string (required)
+    //   - heroTitle: string (optional)
+    //   - heroSubtitle: string (optional)
+    //   - quizTitle: string (optional)
+    //   - fontFamily: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "wlgp911114@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['name', 'birthDate', 'phone', 'region', 'quizResults', 'score', 'submittedAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.birthDate is string && data.birthDate.size() == 8 &&
+             data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 15 &&
+             data.region is string &&
+             data.quizResults is list &&
+             data.score is number &&
+             data.submittedAt is timestamp;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['title', 'content', 'createdAt', 'authorId']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string &&
+             data.createdAt is timestamp &&
+             data.authorId is string;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['siteName', 'primaryColor', 'backgroundColor']) &&
+             data.siteName is string &&
+             data.primaryColor is string &&
+             data.backgroundColor is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAdmin();
+      allow create: if isValidSubmission(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidPost(request.resource.data);
+      allow update: if isAdmin() && isValidPost(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{configId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

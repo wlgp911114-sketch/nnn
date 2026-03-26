@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Admin user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "displayName": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Quiz submission with personal info",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "birthDate": { "type": "string" },
+        "phone": { "type": "string" },
+        "region": { "type": "string" },
+        "quizResults": { "type": "array", "items": { "type": "object" } },
+        "score": { "type": "integer" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "birthDate", "phone", "region", "quizResults", "score", "submittedAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "News or announcement post",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["title", "content", "createdAt", "authorId"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Website customization settings",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "backgroundColor": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "quizTitle": { "type": "string" },
+        "fontFamily": { "type": "string" }
+      },
+      "required": ["siteName", "primaryColor", "backgroundColor"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Admin users"
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Quiz submissions"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "News posts"
+    },
+    "/settings/config": {
+      "schema": "Settings",
+      "description": "Global website settings"
+    }
+  }
+}
